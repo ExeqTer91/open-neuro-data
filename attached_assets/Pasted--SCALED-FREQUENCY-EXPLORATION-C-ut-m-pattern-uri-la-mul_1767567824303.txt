@@ -1,0 +1,185 @@
+"""
+SCALED FREQUENCY EXPLORATION
+============================
+Căutăm pattern-uri φ la multiple scale de frecvență
+"""
+
+import numpy as np
+from scipy import stats
+import matplotlib.pyplot as plt
+
+# ========================================
+# TEST 1: SUB-BAND ANALYSIS
+# ========================================
+def subband_phi_analysis(subjects_data):
+    """
+    Calculează ratios pentru sub-benzi:
+    - Delta (1-4 Hz) : Theta (4-8 Hz)
+    - Theta (4-8 Hz) : Alpha (8-13 Hz)  
+    - Alpha (8-13 Hz) : Beta (13-30 Hz)
+    - Low Alpha (8-10) : High Alpha (10-13)
+    - Low Theta (4-6) : High Theta (6-8)
+    """
+    
+    bands = {
+        'delta': (1, 4),
+        'theta_low': (4, 6),
+        'theta_high': (6, 8),
+        'theta': (4, 8),
+        'alpha_low': (8, 10),
+        'alpha_high': (10, 13),
+        'alpha': (8, 13),
+        'beta_low': (13, 20),
+        'beta': (13, 30)
+    }
+    
+    # Pentru fiecare subiect, calculează centroizii pentru fiecare bandă
+    # Apoi calculează ratios între benzi adiacente
+    
+    ratios_to_test = [
+        ('theta', 'delta'),      # θ/δ
+        ('alpha', 'theta'),      # α/θ (asta avem deja)
+        ('beta', 'alpha'),       # β/α
+        ('theta_high', 'theta_low'),  # θ_hi/θ_lo
+        ('alpha_high', 'alpha_low'),  # α_hi/α_lo
+        ('alpha_low', 'theta_high'),  # α_lo/θ_hi (zona 8 Hz!)
+    ]
+    
+    results = {}
+    for num, denom in ratios_to_test:
+        # Calculează ratio pentru fiecare subiect
+        # ratio = centroid[num] / centroid[denom]
+        # Apoi corelează cu convergence
+        pass
+    
+    return results
+
+
+# ========================================
+# TEST 2: FIBONACCI CASCADE CHECK
+# ========================================
+def fibonacci_cascade_test(subjects_data):
+    """
+    Testează dacă banda frequencies urmează Fibonacci:
+    f_n+1 / f_n ≈ φ pentru benzi consecutive
+    
+    Fibonacci: 1, 1, 2, 3, 5, 8, 13, 21, 34...
+    Ratios: 1, 2, 1.5, 1.67, 1.6, 1.625, 1.615, 1.619...
+    
+    EEG bands: δ(2) : θ(5) : α(10) : β(20) : γ(40)
+    Ratios:      2.5    2.0     2.0     2.0
+    
+    Hmm, nu exact φ... DAR:
+    θ_peak : α_peak când sunt CONVERGENT = 8:8 = 1.0
+    θ_centroid : α_centroid în general = ~1.7 ≈ φ
+    """
+    
+    # Pentru fiecare subiect cu HIGH convergence:
+    # - Ce e θ_centroid : α_centroid ratio DURING convergence epochs?
+    # - Ce e ratio OUTSIDE convergence epochs?
+    
+    pass
+
+
+# ========================================
+# TEST 3: OPTIMAL RATIO PER SUBJECT
+# ========================================
+def individual_optimal_ratio(subjects_data):
+    """
+    Pentru fiecare subiect individual:
+    - Care e ratio-ul lor θ/α?
+    - Care e convergența lor?
+    - Există clustering în jurul lui φ pentru HIGH converters?
+    """
+    
+    ratios = []
+    convergences = []
+    
+    for s in subjects_data:
+        ratios.append(s['theta_alpha_ratio'])
+        convergences.append(s['convergence_pct'])
+    
+    # Scatter plot cu ratio vs convergence
+    plt.figure(figsize=(10, 6))
+    plt.scatter(ratios, convergences, c=convergences, cmap='viridis', s=100, alpha=0.7)
+    plt.axvline(x=1.618, color='gold', linestyle='--', linewidth=2, label='φ = 1.618')
+    plt.axvline(x=2.0, color='red', linestyle='--', linewidth=2, label='2:1 = 2.0')
+    plt.colorbar(label='Convergence %')
+    plt.xlabel('θ/α Frequency Ratio')
+    plt.ylabel('Convergence %')
+    plt.title('Individual θ/α Ratios vs Convergence')
+    plt.legend()
+    plt.savefig('individual_ratios_scatter.png', dpi=150)
+    plt.show()
+    
+    # Unde se clustering HIGH converters?
+    high_conv = [r for r, c in zip(ratios, convergences) if c > 20]
+    low_conv = [r for r, c in zip(ratios, convergences) if c < 5]
+    
+    print(f"HIGH converters mean ratio: {np.mean(high_conv):.3f}")
+    print(f"LOW converters mean ratio: {np.mean(low_conv):.3f}")
+
+
+# ========================================
+# TEST 4: HARMONIC SERIES CHECK
+# ========================================
+def harmonic_distance_analysis(subjects_data):
+    """
+    Poate nu e despre φ vs 2:1, ci despre DISTANȚA de ORICE harmonic:
+    - 1:1, 2:1, 3:1, 3:2, 4:3, 5:4...
+    
+    φ e special pentru că e MAXIMALLY distant de TOATE harmonics!
+    """
+    
+    harmonics = [1.0, 1.25, 1.333, 1.5, 1.667, 2.0, 2.5, 3.0]  # n:m ratios
+    
+    for s in subjects_data:
+        ratio = s['theta_alpha_ratio']
+        # Calculează distanța minimă la ORICE harmonic
+        min_dist = min(abs(ratio - h) for h in harmonics)
+        s['harmonic_distance'] = min_dist
+    
+    # Corelează harmonic_distance cu convergence
+    distances = [s['harmonic_distance'] for s in subjects_data]
+    convergences = [s['convergence_pct'] for s in subjects_data]
+    
+    r, p = stats.pearsonr(distances, convergences)
+    print(f"Harmonic distance ↔ Convergence: r = {r:.3f}, p = {p:.4f}")
+    
+    # Dacă r > 0: cu cât mai DEPARTE de harmonics, cu atât mai multă convergence
+    # Asta ar fi KILLER pentru paper!
+
+
+# ========================================
+# TEST 5: RESPIRATORY FREQUENCY CONNECTION
+# ========================================
+def respiratory_modulation_check(subjects_data):
+    """
+    M-TRH hint: respirația (0.1-0.25 Hz) modulează theta-alpha?
+    
+    Dacă ai acces la:
+    - Alpha amplitude fluctuations în timp
+    - Spectrul acestor fluctuații
+    - Peak la ~0.15 Hz (respiratory)?
+    
+    Asta ar CONECTA direct la M-TRH!
+    """
+    pass
+
+
+# ========================================
+# RULEAZĂ TOATE TESTELE
+# ========================================
+if __name__ == "__main__":
+    # Load your data
+    # subjects_data = load_all_subjects()
+    
+    print("=" * 60)
+    print("SCALED FREQUENCY EXPLORATION")
+    print("=" * 60)
+    
+    # Test 3 e cel mai ușor de rulat cu datele existente
+    # individual_optimal_ratio(subjects_data)
+    
+    # Test 4 ar fi foarte interesant
+    # harmonic_distance_analysis(subjects_data)
