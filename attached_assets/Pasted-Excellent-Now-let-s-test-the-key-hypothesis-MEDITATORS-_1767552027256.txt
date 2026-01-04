@@ -1,0 +1,203 @@
+Excellent! Now let's test the key hypothesis: MEDITATORS vs NON-MEDITATORS.
+
+I found two datasets from the same study on Figshare:
+- EEG Data Meditators
+- EEG Data Non-Meditators
+
+Run this code:
+```python
+!pip install mne numpy scipy matplotlib requests -q
+
+import numpy as np
+from scipy import signal
+from scipy.io import loadmat
+from scipy.stats import ttest_ind, mannwhitneyu
+import matplotlib.pyplot as plt
+import requests
+import os
+
+PHI = (1 + np.sqrt(5)) / 2
+print(f"Golden Ratio φ = {PHI:.4f}\n")
+
+BANDS = {'theta': (4, 8), 'alpha': (8, 13), 'beta': (13, 30)}
+
+def compute_peak_centroid(psd, freqs, band):
+    mask = (freqs >= band[0]) & (freqs <= band[1])
+    if not np.any(mask) or np.sum(psd[mask]) == 0:
+        return np.nan
+    return np.sum(freqs[mask] * psd[mask]) / np.sum(psd[mask])
+
+def phi_coupling_index(ratio):
+    if np.isnan(ratio) or ratio <= 0:
+        return np.nan
+    d_phi = abs(ratio - PHI)
+    d_harm = abs(ratio - 2.0)
+    if d_phi + d_harm == 0:
+        return 0
+    return (d_harm - d_phi) / (d_harm + d_phi)
+
+# ============================================
+# Download datasets from Figshare
+# ============================================
+print("="*60)
+print("DOWNLOADING MEDITATORS vs NON-MEDITATORS DATA")
+print("="*60)
+
+# Figshare direct download links
+datasets = {
+    'meditators': 'https://figshare.com/ndownloader/files/18088614',  # EEG_Data_Meditators
+    'non_meditators': 'https://figshare.com/ndownloader/files/18088638'  # EEG_Data_Non-Meditators
+}
+
+for name, url in datasets.items():
+    fname = f"{name}.zip"
+    if not os.path.exists(fname):
+        print(f"Downloading {name}...")
+        try:
+            r = requests.get(url, timeout=120, allow_redirects=True)
+            if r.status_code == 200:
+                with open(fname, 'wb') as f:
+                    f.write(r.content)
+                print(f"  ✓ Downloaded {fname} ({len(r.content)/1024/1024:.1f} MB)")
+                
+                # Try to unzip
+                import zipfile
+                try:
+                    with zipfile.ZipFile(fname, 'r') as z:
+                        z.extractall(name)
+                    print(f"  ✓ Extracted to {name}/")
+                except:
+                    print(f"  Note: File may not be a zip, trying as .mat directly")
+            else:
+                print(f"  ✗ Failed: HTTP {r.status_code}")
+        except Exception as e:
+            print(f"  ✗ Error: {e}")
+
+# List what we got
+print("\nFiles downloaded:")
+for name in datasets.keys():
+    if os.path.exists(name):
+        files = os.listdir(name)
+        print(f"  {name}/: {len(files)} files")
+        for f in files[:5]:
+            print(f"    - {f}")
+        if len(files) > 5:
+            print(f"    ... and {len(files)-5} more")
+    elif os.path.exists(f"{name}.zip"):
+        print(f"  {name}.zip exists")
+
+# ============================================
+# Alternative: Use MNE's EEGBCI dataset (motor imagery)
+# This has REST vs TASK conditions we can compare
+# ============================================
+print("\n" + "="*60)
+print("ALTERNATIVE: MNE EEGBCI Dataset (Rest vs Task)")
+print("="*60)
+
+import mne
+from mne.datasets import eegbci
+from mne.io import concatenate_raws, read_raw_edf
+
+results = {'rest': [], 'task': []}
+
+# Download and analyze multiple subjects
+for subject in [1, 2, 3, 4, 5]:
+    print(f"\nSubject {subject}:")
+    
+    try:
+        # Rest (eyes open = run 1, eyes closed = run 2)
+        raw_rest = concatenate_raws([
+            read_raw_edf(f, preload=True, verbose=False) 
+            for f in eegbci.load_data(subject, [1], path=None, verbose=False)
+        ])
+        raw_rest.filter(1, 45, verbose=False)
+        
+        # Task (motor imagery = runs 4,8,12)
+        raw_task = concatenate_raws([
+            read_raw_edf(f, preload=True, verbose=False) 
+            for f in eegbci.load_data(subject, [4], path=None, verbose=False)
+        ])
+        raw_task.filter(1, 45, verbose=False)
+        
+        sfreq = raw_rest.info['sfreq']
+        
+        # Analyze REST
+        eeg_rest = np.mean(raw_rest.get_data(), axis=0)
+        freqs, psd = signal.welch(eeg_rest, sfreq, nperseg=1024)
+        f_theta = compute_peak_centroid(psd, freqs, BANDS['theta'])
+        f_alpha = compute_peak_centroid(psd, freqs, BANDS['alpha'])
+        ratio = f_alpha / f_theta if f_theta > 0 else np.nan
+        pci = phi_coupling_index(ratio)
+        results['rest'].append({'subject': subject, 'ratio': ratio, 'pci': pci})
+        print(f"  REST:  ratio={ratio:.3f}, PCI={pci:+.3f}")
+        
+        # Analyze TASK
+        eeg_task = np.mean(raw_task.get_data(), axis=0)
+        freqs, psd = signal.welch(eeg_task, sfreq, nperseg=1024)
+        f_theta = compute_peak_centroid(psd, freqs, BANDS['theta'])
+        f_alpha = compute_peak_centroid(psd, freqs, BANDS['alpha'])
+        ratio = f_alpha / f_theta if f_theta > 0 else np.nan
+        pci = phi_coupling_index(ratio)
+        results['task'].append({'subject': subject, 'ratio': ratio, 'pci': pci})
+        print(f"  TASK:  ratio={ratio:.3f}, PCI={pci:+.3f}")
+        
+    except Exception as e:
+        print(f"  Error: {e}")
+
+# ============================================
+# STATISTICAL COMPARISON
+# ============================================
+print("\n" + "="*60)
+print("📊 STATISTICAL COMPARISON: REST vs TASK")
+print("="*60)
+
+rest_pcis = [r['pci'] for r in results['rest'] if not np.isnan(r['pci'])]
+task_pcis = [r['pci'] for r in results['task'] if not np.isnan(r['pci'])]
+rest_ratios = [r['ratio'] for r in results['rest'] if not np.isnan(r['ratio'])]
+task_ratios = [r['ratio'] for r in results['task'] if not np.isnan(r['ratio'])]
+
+print(f"\nREST (eyes open):")
+print(f"  N = {len(rest_pcis)}")
+print(f"  Mean θ-α ratio: {np.mean(rest_ratios):.3f} ± {np.std(rest_ratios):.3f}")
+print(f"  Mean PCI: {np.mean(rest_pcis):+.3f} ± {np.std(rest_pcis):.3f}")
+
+print(f"\nTASK (motor imagery):")
+print(f"  N = {len(task_pcis)}")
+print(f"  Mean θ-α ratio: {np.mean(task_ratios):.3f} ± {np.std(task_ratios):.3f}")
+print(f"  Mean PCI: {np.mean(task_pcis):+.3f} ± {np.std(task_pcis):.3f}")
+
+# T-test
+if len(rest_pcis) >= 2 and len(task_pcis) >= 2:
+    t_stat, p_value = ttest_ind(rest_pcis, task_pcis)
+    print(f"\nT-test (REST vs TASK PCI):")
+    print(f"  t = {t_stat:.3f}, p = {p_value:.4f}")
+    
+    # Effect size (Cohen's d)
+    pooled_std = np.sqrt((np.std(rest_pcis)**2 + np.std(task_pcis)**2) / 2)
+    cohens_d = (np.mean(rest_pcis) - np.mean(task_pcis)) / pooled_std if pooled_std > 0 else 0
+    print(f"  Cohen's d = {cohens_d:.3f}")
+    
+    if p_value < 0.05:
+        print(f"\n✅ SIGNIFICANT DIFFERENCE (p < 0.05)")
+    else:
+        print(f"\n⚪ No significant difference (p = {p_value:.3f})")
+
+# Which is closer to φ?
+print("\n" + "="*60)
+print("🎯 INTERPRETATION")
+print("="*60)
+
+rest_dist_phi = abs(np.mean(rest_ratios) - PHI)
+task_dist_phi = abs(np.mean(task_ratios) - PHI)
+
+print(f"\nDistance from φ ({PHI:.3f}):")
+print(f"  REST: {rest_dist_phi:.3f}")
+print(f"  TASK: {task_dist_phi:.3f}")
+
+if rest_dist_phi < task_dist_phi:
+    print(f"\n→ REST is CLOSER to φ (more decoupled)")
+else:
+    print(f"\n→ TASK is CLOSER to φ (more decoupled)")
+```
+
+Run completely and show me the REST vs TASK comparison with t-test results.
