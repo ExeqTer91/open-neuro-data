@@ -1,0 +1,210 @@
+"""
+GALOP MODE ANALYSIS
+===================
+Căutăm pattern-uri de mișcare non-secvențială/ritmică
+"""
+
+import numpy as np
+from collections import Counter
+from scipy import stats
+
+# ========================================
+# TEST 1: SKIP ANALYSIS (Salturi mari)
+# ========================================
+def analyze_skips(transitions_per_subject):
+    """
+    Câte tranziții sunt 'skips' (step > 1)?
+    """
+    
+    vibraton_order = ['V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7']
+    
+    results = {
+        'step_1': 0,  # Sequential (V5→V4)
+        'step_2': 0,  # Skip 1 (V5→V3)
+        'step_3': 0,  # Skip 2 (V5→V2)
+        'step_4+': 0, # Big jump (V7→V2)
+    }
+    
+    for (from_s, to_s), count in transitions_per_subject.items():
+        from_idx = vibraton_order.index(from_s)
+        to_idx = vibraton_order.index(to_s)
+        step = abs(to_idx - from_idx)
+        
+        if step == 1:
+            results['step_1'] += count
+        elif step == 2:
+            results['step_2'] += count
+        elif step == 3:
+            results['step_3'] += count
+        else:
+            results['step_4+'] += count
+    
+    return results
+
+
+# ========================================
+# TEST 2: OSCILLATION DETECTION
+# ========================================
+def detect_oscillations(state_sequence):
+    """
+    Detectează pattern-uri de oscilație: A→B→A→B...
+    """
+    
+    oscillations = []
+    
+    for i in range(len(state_sequence) - 3):
+        s1, s2, s3, s4 = state_sequence[i:i+4]
+        
+        # Pattern A-B-A-B
+        if s1 == s3 and s2 == s4 and s1 != s2:
+            oscillations.append((s1, s2))
+    
+    return Counter(oscillations)
+
+
+# ========================================
+# TEST 3: BURST DETECTION
+# ========================================
+def detect_bursts(state_sequence, window=10):
+    """
+    Detectează perioade cu MULTE tranziții (burst mode)
+    vs perioade stabile (dwelling)
+    """
+    
+    # Count transitions per window
+    transition_counts = []
+    
+    for i in range(0, len(state_sequence) - window, window):
+        segment = state_sequence[i:i+window]
+        transitions_in_window = sum(1 for j in range(len(segment)-1) 
+                                    if segment[j] != segment[j+1])
+        transition_counts.append(transitions_in_window)
+    
+    # Classify: burst (>5 transitions) vs stable (<2)
+    bursts = sum(1 for t in transition_counts if t > 5)
+    stable = sum(1 for t in transition_counts if t < 2)
+    
+    return {
+        'burst_windows': bursts,
+        'stable_windows': stable,
+        'burst_ratio': bursts / len(transition_counts) if transition_counts else 0,
+        'mean_transitions_per_window': np.mean(transition_counts) if transition_counts else 0
+    }
+
+
+# ========================================
+# TEST 4: FIBONACCI TRANSITIONS
+# ========================================
+def analyze_fibonacci_transitions(transitions):
+    """
+    Sunt tranzițiile mai frecvente între vibratoni Fibonacci-related?
+    
+    Fibonacci vibratoni: V1(3:2), V2(8:5≈φ), V3(5:3)
+    Toate sunt Fibonacci ratios!
+    """
+    
+    fib_vibratoni = ['V1', 'V2', 'V3']  # 3:2, 8:5, 5:3
+    non_fib = ['V4', 'V5', 'V6', 'V7']  # 7:4, 9:5, other, 2:1
+    
+    fib_to_fib = 0
+    fib_to_nonfib = 0
+    nonfib_to_fib = 0
+    nonfib_to_nonfib = 0
+    
+    for (from_s, to_s), count in transitions.items():
+        if from_s in fib_vibratoni and to_s in fib_vibratoni:
+            fib_to_fib += count
+        elif from_s in fib_vibratoni and to_s in non_fib:
+            fib_to_nonfib += count
+        elif from_s in non_fib and to_s in fib_vibratoni:
+            nonfib_to_fib += count
+        else:
+            nonfib_to_nonfib += count
+    
+    return {
+        'fib_to_fib': fib_to_fib,
+        'fib_to_nonfib': fib_to_nonfib,
+        'nonfib_to_fib': nonfib_to_fib,
+        'nonfib_to_nonfib': nonfib_to_nonfib,
+        'fib_stability': fib_to_fib / (fib_to_fib + fib_to_nonfib + 0.001),
+        'nonfib_stability': nonfib_to_nonfib / (nonfib_to_nonfib + nonfib_to_fib + 0.001)
+    }
+
+
+# ========================================
+# TEST 5: GALOP PATTERN (Rhythmic 3-beat)
+# ========================================
+def detect_galop_pattern(state_sequence):
+    """
+    Galop în muzică = pattern ritmic 3-beat
+    Caută: A-A-B, A-A-B, A-A-B... sau A-B-B, A-B-B...
+    
+    Sau poate: accelerare/decelerare ritmică
+    """
+    
+    galop_patterns = {
+        'AAB': 0,  # Stay-stay-jump
+        'ABB': 0,  # Jump-stay-stay
+        'ABA': 0,  # Jump-return (bounce)
+        'ABC': 0,  # Sequential progression
+    }
+    
+    for i in range(len(state_sequence) - 2):
+        s1, s2, s3 = state_sequence[i:i+3]
+        
+        if s1 == s2 and s2 != s3:
+            galop_patterns['AAB'] += 1
+        elif s1 != s2 and s2 == s3:
+            galop_patterns['ABB'] += 1
+        elif s1 != s2 and s2 != s3 and s1 == s3:
+            galop_patterns['ABA'] += 1
+        elif s1 != s2 and s2 != s3 and s1 != s3:
+            galop_patterns['ABC'] += 1
+    
+    return galop_patterns
+
+
+# ========================================
+# TEST 6: ZONE TRANSITIONS
+# ========================================
+def analyze_zone_transitions(state_sequence):
+    """
+    Analizează tranziții între ZONE (nu individual vibratoni):
+    - φ-zone: V1, V2, V3
+    - Mid-zone: V4, V5
+    - Lock-zone: V6, V7
+    """
+    
+    def get_zone(state):
+        if state in ['V1', 'V2', 'V3']:
+            return 'φ'
+        elif state in ['V4', 'V5']:
+            return 'Mid'
+        else:
+            return 'Lock'
+    
+    zone_sequence = [get_zone(s) for s in state_sequence]
+    
+    zone_transitions = Counter()
+    for i in range(len(zone_sequence) - 1):
+        if zone_sequence[i] != zone_sequence[i+1]:
+            zone_transitions[(zone_sequence[i], zone_sequence[i+1])] += 1
+    
+    return zone_transitions
+
+
+# ========================================
+# TEST 7: HIGH vs LOW GALOP COMPARISON
+# ========================================
+def compare_galop_modes(high_subjects, low_subjects):
+    """
+    HIGH converters au mod diferit de "galop"?
+    """
+    
+    high_galop = {'skips': [], 'bursts': [], 'oscillations': []}
+    low_galop = {'skips': [], 'bursts': [], 'oscillations': []}
+    
+    # Analyze each group
+    # Compare distributions
+    
+    return high_galop, low_galop
