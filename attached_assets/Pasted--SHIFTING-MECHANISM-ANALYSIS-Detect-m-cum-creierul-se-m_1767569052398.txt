@@ -1,0 +1,228 @@
+"""
+SHIFTING MECHANISM ANALYSIS
+===========================
+Detectăm cum creierul se mișcă între vibraton states în timp
+"""
+
+import numpy as np
+from scipy import stats, signal
+import matplotlib.pyplot as plt
+from collections import Counter
+
+# ========================================
+# TEST 1: STATE SEQUENCE ANALYSIS
+# ========================================
+def analyze_state_transitions(if_ratios_timeseries, subject_id):
+    """
+    Pentru fiecare subiect, urmărește secvența de vibraton states în timp.
+    
+    Input: if_ratios_timeseries = array of instantaneous θ/α ratios over time
+    """
+    
+    # Definește vibraton bins
+    vibraton_edges = [1.45, 1.55, 1.64, 1.70, 1.77, 1.83, 1.90, 2.05]
+    vibraton_names = ['V1(3:2)', 'V2(φ)', 'V3(5:3)', 'V4(7:4)', 'V5(9:5)', 'V6', 'V7(2:1)']
+    
+    # Assign each timepoint to a vibraton state
+    states = np.digitize(if_ratios_timeseries, vibraton_edges) - 1
+    states = np.clip(states, 0, 6)  # Ensure valid indices
+    
+    # Count transitions
+    transitions = Counter()
+    for i in range(len(states) - 1):
+        from_state = vibraton_names[states[i]]
+        to_state = vibraton_names[states[i+1]]
+        if from_state != to_state:  # Only count actual transitions
+            transitions[(from_state, to_state)] += 1
+    
+    return states, transitions
+
+
+# ========================================
+# TEST 2: TRANSITION MATRIX
+# ========================================
+def build_transition_matrix(all_subjects_transitions):
+    """
+    Construiește matricea de tranziție Markov:
+    P[i,j] = probabilitatea de a trece din state i în state j
+    """
+    
+    n_states = 7
+    transition_counts = np.zeros((n_states, n_states))
+    
+    for subj_transitions in all_subjects_transitions:
+        for (from_s, to_s), count in subj_transitions.items():
+            i = vibraton_names.index(from_s)
+            j = vibraton_names.index(to_s)
+            transition_counts[i, j] += count
+    
+    # Normalize to probabilities
+    row_sums = transition_counts.sum(axis=1, keepdims=True)
+    row_sums[row_sums == 0] = 1  # Avoid division by zero
+    transition_matrix = transition_counts / row_sums
+    
+    return transition_matrix, transition_counts
+
+
+# ========================================
+# TEST 3: FORWARD vs BACKWARD SHIFTS
+# ========================================
+def analyze_shift_direction(transitions):
+    """
+    Compară: Câte tranziții merg "în jos" (spre φ) vs "în sus" (spre 2:1)?
+    """
+    
+    forward = 0   # V7→V6→V5→V4→V3→V2→V1 (decreasing ratio, toward φ)
+    backward = 0  # V1→V2→V3→V4→V5→V6→V7 (increasing ratio, toward 2:1)
+    
+    vibraton_order = ['V1(3:2)', 'V2(φ)', 'V3(5:3)', 'V4(7:4)', 'V5(9:5)', 'V6', 'V7(2:1)']
+    
+    for (from_s, to_s), count in transitions.items():
+        from_idx = vibraton_order.index(from_s)
+        to_idx = vibraton_order.index(to_s)
+        
+        if to_idx < from_idx:  # Moving toward V1/φ
+            forward += count
+        else:  # Moving toward V7/2:1
+            backward += count
+    
+    return {
+        'forward_to_phi': forward,
+        'backward_to_2:1': backward,
+        'ratio': forward / (backward + 0.001),
+        'bias': 'toward_φ' if forward > backward else 'toward_2:1'
+    }
+
+
+# ========================================
+# TEST 4: STEP SIZE ANALYSIS
+# ========================================
+def analyze_step_sizes(transitions):
+    """
+    Creierul face salturi mici (V5→V4) sau mari (V5→V2)?
+    """
+    
+    step_sizes = []
+    vibraton_order = ['V1(3:2)', 'V2(φ)', 'V3(5:3)', 'V4(7:4)', 'V5(9:5)', 'V6', 'V7(2:1)']
+    
+    for (from_s, to_s), count in transitions.items():
+        from_idx = vibraton_order.index(from_s)
+        to_idx = vibraton_order.index(to_s)
+        step = abs(to_idx - from_idx)
+        step_sizes.extend([step] * count)
+    
+    return {
+        'mean_step': np.mean(step_sizes),
+        'step_distribution': Counter(step_sizes),
+        'sequential_pct': step_sizes.count(1) / len(step_sizes) * 100 if step_sizes else 0
+    }
+
+
+# ========================================
+# TEST 5: HIGH vs LOW CONVERTERS DYNAMICS
+# ========================================
+def compare_dynamics(high_conv_subjects, low_conv_subjects):
+    """
+    HIGH converters au dinamici diferite de LOW converters?
+    
+    Hypotheses:
+    - HIGH: Mai multe tranziții, mai multă "osmoză"
+    - HIGH: Bias spre φ (forward shifts)
+    - HIGH: Pași mai mici, mai secvențiali
+    - LOW: Blocați în V5-V6, puține tranziții
+    """
+    
+    high_stats = {
+        'total_transitions': 0,
+        'forward_bias': 0,
+        'mean_step': 0,
+        'time_in_phi_zone': 0,  # V2 + V3
+    }
+    
+    low_stats = {
+        'total_transitions': 0,
+        'forward_bias': 0,
+        'mean_step': 0,
+        'time_in_phi_zone': 0,
+    }
+    
+    # Compare the two groups
+    # t-tests for each metric
+    
+    return high_stats, low_stats
+
+
+# ========================================
+# TEST 6: PATH TO φ ANALYSIS
+# ========================================
+def analyze_path_to_phi(states_timeseries):
+    """
+    Când cineva ajunge la V2 (φ), cum a ajuns acolo?
+    
+    Căutăm: secvența de states înainte de a atinge V2
+    """
+    
+    paths_to_phi = []
+    
+    for i, state in enumerate(states_timeseries):
+        if state == 1:  # V2 = φ state (index 1)
+            # Look back 5 steps
+            if i >= 5:
+                path = states_timeseries[i-5:i+1]
+                paths_to_phi.append(path)
+    
+    # Most common paths?
+    # Sequential (5→4→3→2→1→V2) vs Jump (5→5→5→5→V2)?
+    
+    return paths_to_phi
+
+
+# ========================================
+# VISUALIZATION
+# ========================================
+def plot_transition_matrix(matrix):
+    """
+    Heatmap al matricei de tranziție
+    """
+    
+    plt.figure(figsize=(10, 8))
+    plt.imshow(matrix, cmap='YlOrRd')
+    plt.colorbar(label='Transition Probability')
+    
+    labels = ['V1\n3:2', 'V2\nφ', 'V3\n5:3', 'V4\n7:4', 'V5\n9:5', 'V6', 'V7\n2:1']
+    plt.xticks(range(7), labels)
+    plt.yticks(range(7), labels)
+    plt.xlabel('To State')
+    plt.ylabel('From State')
+    plt.title('Vibraton State Transition Matrix')
+    
+    # Annotate with values
+    for i in range(7):
+        for j in range(7):
+            if matrix[i,j] > 0.01:
+                plt.text(j, i, f'{matrix[i,j]:.2f}', ha='center', va='center')
+    
+    plt.tight_layout()
+    plt.savefig('transition_matrix.png', dpi=150)
+    plt.show()
+
+
+def plot_state_trajectory(states, subject_id):
+    """
+    Vizualizează traiectoria unui subiect prin vibraton space
+    """
+    
+    plt.figure(figsize=(14, 4))
+    plt.plot(states, 'b-', alpha=0.7, linewidth=0.5)
+    plt.axhline(y=1, color='gold', linestyle='--', label='V2 (φ)')
+    plt.axhline(y=4, color='gray', linestyle='--', label='V5 (default)')
+    plt.axhline(y=6, color='red', linestyle='--', label='V7 (2:1)')
+    
+    plt.yticks(range(7), ['V1\n3:2', 'V2\nφ', 'V3\n5:3', 'V4\n7:4', 'V5\n9:5', 'V6', 'V7\n2:1'])
+    plt.xlabel('Time (samples)')
+    plt.ylabel('Vibraton State')
+    plt.title(f'Subject {subject_id}: Trajectory through Vibraton Space')
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(f'trajectory_{subject_id}.png', dpi=150)
+    plt.show()
