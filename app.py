@@ -1,6 +1,7 @@
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 st.set_page_config(page_title="EEG φ-Switching Analysis", page_icon="🧠", layout="wide")
 
@@ -85,51 +86,86 @@ with col2:
     st.pyplot(fig2)
 
 st.markdown("---")
+st.header("🔮 Infinity State (∞) Analysis - 8 Hz Convergence")
+
+st.markdown("""
+The **Infinity State** (∞) occurs when theta and alpha frequencies converge at the 8 Hz boundary,
+creating a unified theta-alpha oscillation. This is measured by the **8 Hz Convergence** metric.
+""")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("C. Individual Subject Ratios vs PCI")
-    fig3, ax3 = plt.subplots(figsize=(10, 6))
-    
-    np.random.seed(42)
-    ratios = np.random.normal(1.78, 0.06, 90)
-    pcis_plot = (2.0 - ratios) / (2.0 - PHI + ratios - PHI) * 0.5 + np.random.normal(0, 0.2, 90)
-    
-    ax3.scatter(ratios, pcis_plot, alpha=0.6, c='steelblue', s=50)
-    ax3.axhline(0, color='black', linestyle='--', linewidth=1)
-    ax3.axvline(PHI, color='gold', linestyle='-', linewidth=3, label=f'φ = {PHI:.3f}')
-    ax3.axvline(2.0, color='red', linestyle='-', linewidth=3, label='2:1 = 2.0')
-    ax3.set_xlabel('θ-α Ratio', fontsize=12)
-    ax3.set_ylabel('PCI', fontsize=12)
-    ax3.set_title('Individual Subject Ratios vs PCI', fontsize=14)
-    ax3.legend(fontsize=10)
-    ax3.set_xlim(1.5, 2.1)
-    ax3.set_ylim(-1.0, 1.0)
-    
-    plt.tight_layout()
-    st.pyplot(fig3)
+    st.subheader("HIGH vs LOW ∞-Accessors Comparison")
+    st.markdown("""
+    | Metric | HIGH ∞ (N=13) | LOW ∞ (N=17) | p-value | Sig |
+    |--------|---------------|--------------|---------|-----|
+    | **Alpha Power** | 0.115 ± 0.067 | 0.070 ± 0.044 | **0.0417** | ** |
+    | **Beta Power** | 0.122 ± 0.072 | 0.070 ± 0.029 | **0.0129** | ** |
+    | **θ/α Ratio** | 1.88 ± 0.97 | 2.93 ± 1.42 | **0.0361** | ** |
+    | **PLV 1:1 (fusion)** | 0.065 ± 0.014 | 0.046 ± 0.020 | **0.0088** | ** |
+    | **Theta Centroid** | 5.81 Hz | 5.61 Hz | **0.0037** | ** |
+    | **θ-α Freq Ratio** | 1.757 | 1.805 | 0.0632 | * |
+    """)
 
 with col2:
-    st.subheader("D. Key Findings Summary")
-    
+    st.subheader("Top 5 Natural ∞-Accessors")
     st.markdown("""
-    ### Overall Statistics
-    - **Total N = 90 subjects**
-    - **Grand Mean PCI = +0.098 ± 0.402**
-    - **PCI Range: -0.885 to +0.988**
+    | Rank | Subject | 8Hz Convergence | PCI | θ-α Ratio |
+    |------|---------|-----------------|-----|-----------|
+    | #1 | **S24** | **35.6%** | +0.686 | 1.678 (≈φ) |
+    | #2 | **S14** | **34.5%** | +0.897 | 1.596 (≈φ) |
+    | #3 | S20 | 18.6% | +0.229 | 1.765 |
+    | #4 | S19 | 16.9% | -0.413 | 1.888 |
+    | #5 | S30 | 16.9% | +0.289 | 1.719 |
+    """)
+
+st.markdown("---")
+st.header("📈 Critical Correlations")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.metric("PCI ↔ 8Hz Convergence", "r = +0.603", "p < 0.0001")
+    st.caption("φ-coupling predicts ∞-state access")
+
+with col2:
+    st.metric("Convergence ↔ PLV 1:1", "r = +0.583", "p = 0.0007")
+    st.caption("Phase fusion predicts ∞-state")
+
+with col3:
+    st.metric("Convergence ↔ θ-α Ratio", "r = -0.635", "p = 0.0002")
+    st.caption("Closer to φ = more ∞-access")
+
+st.markdown("---")
+st.header("🧘 Meditation Baseline Analysis")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.subheader("Non-Meditators Baseline (N=50)")
+    st.markdown("""
+    | Metric | Value |
+    |--------|-------|
+    | **Mean PCI** | +0.124 ± 0.383 |
+    | **Mean 8Hz Convergence** | 10.5% |
+    | **φ-organized** | 32/50 (64%) |
     
-    ### Organization Distribution
-    - **φ-organized (PCI > 0): 54 subjects (60%)**
-    - **2:1 organized (PCI < 0): 36 subjects (40%)**
+    **Available Meditation Datasets:**
+    - OpenNeuro ds003969: 98 subjects (meditation vs thinking)
+    - OpenNeuro ds001787: 24 meditators  
+    - Zenodo 57911: Gamma meditation (4 traditions)
+    """)
+
+with col2:
+    st.subheader("Hypothesis for Meditators")
+    st.info("""
+    Based on baseline, experienced meditators should show:
     
-    ### Interpretation
-    **✅ OVERALL TENDENCY TOWARD φ**
-    
-    The high individual variability (std ≈ 0.40) suggests PCI may be 
-    a stable individual trait rather than a state-dependent variable.
-    
-    **Golden Ratio φ = 1.6180**
+    - **Higher PCI** (more φ-organized)
+    - **Higher 8Hz convergence** (more ∞-state access)  
+    - **Lower variability** (more stable)
+    - **Stronger PLV 1:1** (theta-alpha fusion)
     """)
 
 st.markdown("---")
@@ -141,27 +177,37 @@ with col1:
     st.success("""
     ### Main Findings:
     1. **60% of subjects show φ-organization** (PCI > 0)
-    2. **Grand Mean PCI is positive** (+0.098), indicating overall tendency toward golden ratio
-    3. **All mean ratios (1.69-1.81) fall between φ (1.618) and 2:1 (2.0)**
-    4. **Task states (motor imagery, auditory/visual) show slightly higher PCI** than rest
+    2. **PCI strongly correlates with ∞-state access** (r = 0.603)
+    3. **PLV 1:1 (theta-alpha fusion)** is the best predictor of ∞-state (p = 0.0088)
+    4. **Natural ∞-accessors** have θ-α ratios closer to φ
+    5. **S24 and S14** are exceptional (>34% ∞-convergence)
     """)
 
 with col2:
     st.info("""
-    ### Implications:
-    - Human EEG frequency ratios tend toward the golden ratio
-    - The brain may use φ-based organization for optimal information processing
-    - High individual variability suggests this may be a trait-like characteristic
-    - No significant difference between REST and TASK conditions (p = 0.77)
+    ### Key Predictors of ∞-State Access:
+    - **Higher PCI** (φ-coupled brains)
+    - **Lower θ-α frequency ratio** (closer to φ = 1.618)
+    - **Higher PLV 1:1** (phase-locked theta-alpha)
+    - **Higher alpha/beta relative power**
+    - **Higher theta centroid** (theta "rising" toward 8 Hz)
     """)
 
 st.markdown("---")
+st.header("📊 Saved Visualizations")
 
-if st.checkbox("Show saved visualization"):
-    import os
-    if os.path.exists("comprehensive_phi_analysis.png"):
-        st.image("comprehensive_phi_analysis.png", caption="Comprehensive φ-Switching Analysis Results", use_container_width=True)
-    else:
-        st.warning("Visualization not yet generated. Run the comprehensive analysis first.")
+images = [
+    ("comprehensive_phi_analysis.png", "Comprehensive φ-Switching Analysis"),
+    ("infinity_accessors_analysis.png", "Infinity Accessors Analysis"),
+    ("cross_frequency_analysis.png", "Cross-Frequency Analysis"),
+    ("meditation_baseline.png", "Meditation Baseline Analysis"),
+    ("rest_vs_task.png", "REST vs TASK Comparison"),
+]
 
-st.caption("Data sources: Zenodo Alpha Waves (N=19), EEGBCI REST/TASK (N=40), EEGBCI Extended (N=30), MNE Sample (N=1)")
+for img_path, caption in images:
+    if os.path.exists(img_path):
+        with st.expander(f"📷 {caption}"):
+            st.image(img_path, caption=caption, use_container_width=True)
+
+st.markdown("---")
+st.caption(f"φ (Golden Ratio) = {PHI:.6f} | Data sources: Zenodo Alpha Waves, EEGBCI, MNE Sample, Meditation datasets")
