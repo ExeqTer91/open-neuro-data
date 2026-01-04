@@ -1,0 +1,174 @@
+"""
+OSMOSIS / PHASE TRANSITION / QUANTUM STRUCTURE ANALYSIS
+========================================================
+Căutăm: faze critice, tranziții, structuri fundamentale
+"""
+
+import numpy as np
+from scipy import stats
+import matplotlib.pyplot as plt
+
+# ========================================
+# TEST 1: OSMOZA - FLUX ÎNTRE STĂRI
+# ========================================
+def osmosis_analysis(if_theta_timeseries, if_alpha_timeseries):
+    """
+    Cât de "permeabilă" e granița 8 Hz?
+    
+    Măsoară: Frecvența tranzițiilor theta→alpha și alpha→theta
+    """
+    transitions = {
+        'theta_to_alpha': 0,  # IF_theta crește peste 8
+        'alpha_to_theta': 0,  # IF_alpha scade sub 8
+        'crossing_rate': 0,   # Câte crossing-uri per secundă?
+    }
+    
+    # Pentru fiecare subiect, numără de câte ori:
+    # - Theta IF trece de la <7 la >7.5
+    # - Alpha IF trece de la >9 la <8.5
+    # - Ambele sunt simultan în zona 7-9 Hz
+    
+    # HIGH converters ar trebui să aibă MAI MULTE tranziții
+    # = mai multă "osmoză" între stări
+    
+    return transitions
+
+
+# ========================================
+# TEST 2: GHEAȚĂ LICHIDĂ - FAZĂ CRITICĂ
+# ========================================
+def phase_transition_analysis(convergence_timeseries):
+    """
+    Există o "temperatură critică" (prag) unde sistemul 
+    trece brusc între stări?
+    
+    Caută: distribuție bimodală vs unimodală a timpului în convergență
+    """
+    
+    # Histogramă a procentului de convergență
+    # Dacă e BIMODAL = două faze distincte (gheață/lichid)
+    # Dacă e UNIMODAL cu peak la mijloc = fază critică continuă
+    
+    # Variance maximă la "punctul critic"?
+    # Autocorrelation maximă la fază critică? (critical slowing down)
+    
+    pass
+
+
+# ========================================
+# TEST 3: STRUCTURĂ QUANTICĂ - NIVELURI ENERGETICE
+# ========================================
+def quantum_levels_analysis(theta_centroids, alpha_centroids):
+    """
+    Există niveluri discrete de frecvență, 
+    ca nivelurile energetice ale electronului?
+    
+    Dacă da, care sunt "quantum numbers" pentru EEG?
+    """
+    
+    # Histogramă foarte fină a centroizilor
+    # Caută peaks = niveluri permise
+    # Caută gaps = niveluri interzise
+    
+    # Pentru theta (4-8 Hz):
+    theta_hist, theta_bins = np.histogram(theta_centroids, bins=100)
+    
+    # Pentru alpha (8-13 Hz):
+    alpha_hist, alpha_bins = np.histogram(alpha_centroids, bins=100)
+    
+    # Există un "quantum" = spacing-ul minim între niveluri?
+    # Poate e ~0.5 Hz? Sau ~φ/10?
+    
+    return {
+        'theta_levels': theta_bins[np.where(theta_hist > threshold)],
+        'alpha_levels': alpha_bins[np.where(alpha_hist > threshold)],
+    }
+
+
+# ========================================
+# TEST 4: ABECEDAR - BUILDING BLOCKS
+# ========================================
+def alphabet_analysis(all_subjects_data):
+    """
+    Care sunt "literele" fundamentale ale organizării EEG?
+    
+    Poate: combinații de (theta_level, alpha_level, ratio)
+    formează un "alfabet" finit de stări?
+    """
+    
+    # Clusterizare a subiecților după:
+    # - Theta centroid (discret)
+    # - Alpha centroid (discret)
+    # - Ratio (discret - vibratonii)
+    # - Convergence % (discret?)
+    
+    # Câte clustere naturale există? = mărimea "alfabetului"
+    
+    from sklearn.cluster import KMeans
+    
+    features = np.column_stack([
+        theta_centroids,
+        alpha_centroids,
+        ratios,
+        convergence
+    ])
+    
+    # Testează k=2,3,4,5,6,7... și găsește optimal
+    # Elbow method sau silhouette score
+    
+    pass
+
+
+# ========================================
+# TEST 5: CONNECT THE DOTS - RELAȚII ASCUNSE
+# ========================================
+def hidden_connections(all_data):
+    """
+    Ce pattern-uri nu am văzut încă?
+    """
+    
+    # A) Ratio × Convergence × PCI în 3D
+    # Există o suprafață/formă specială?
+    
+    # B) Vibraton state × Convergence
+    # Anumite tranziții între vibratoni = mai multă convergence?
+    
+    # C) Fibonacci sequence în frecvențe absolute?
+    # θ_centroid : α_centroid : β_centroid = Fibonacci?
+    
+    # D) Fractal structure?
+    # Pattern-ul θ/α se repetă la alte scale (δ/θ, α/β)?
+    
+    # E) Phase relationships
+    # PLV între theta și alpha diferă între vibratoni?
+    
+    pass
+
+
+# ========================================
+# TEST 6: GOLDEN SPIRAL CONNECTION
+# ========================================
+def golden_spiral_test(frequencies):
+    """
+    Frecvențele EEG urmează un spiral auriu?
+    
+    Golden spiral: fiecare punct e la distanță φ de precedentul
+    
+    Dacă δ=2, θ=2×φ=3.2, α=3.2×φ=5.2, β=5.2×φ=8.4...
+    Hmm, nu se potrivește exact, DAR:
+    
+    Dacă privim CENTROIZII individuali, 
+    urmează ei o progresie φ?
+    """
+    
+    # θ_centroid × φ = α_centroid predicat
+    # Compară cu α_centroid real
+    # Corelație?
+    
+    predicted_alpha = theta_centroids * 1.618
+    actual_alpha = alpha_centroids
+    
+    r, p = stats.pearsonr(predicted_alpha, actual_alpha)
+    print(f"θ × φ predicts α: r = {r:.3f}, p = {p:.4f}")
+    
+    # Dacă r > 0.5, atunci φ-scaling e real!
