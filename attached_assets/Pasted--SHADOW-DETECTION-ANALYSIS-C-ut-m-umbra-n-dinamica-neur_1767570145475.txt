@@ -1,0 +1,184 @@
+"""
+SHADOW DETECTION ANALYSIS
+=========================
+Căutăm "umbra" în dinamica neurală
+"""
+
+import numpy as np
+from scipy import stats
+from collections import Counter
+
+# ========================================
+# TEST 1: SHADOW STATE (a treia stare ascunsă?)
+# ========================================
+def find_shadow_state(theta_cents, alpha_cents, ratios, convergence):
+    """
+    Există o a treia stare între φ și 2:1?
+    K=2 a fost optim, dar ce se întâmplă în "no man's land"?
+    """
+    
+    # V4-V5 zona = "umbra" între attractori?
+    shadow_zone = (ratios > 1.70) & (ratios < 1.83)
+    phi_zone = ratios < 1.67
+    lock_zone = ratios > 1.86
+    
+    print("THREE ZONES:")
+    print(f"  φ-zone (<1.67): {phi_zone.sum()} subjects")
+    print(f"  Shadow (1.70-1.83): {shadow_zone.sum()} subjects")
+    print(f"  Lock-zone (>1.86): {lock_zone.sum()} subjects")
+    
+    # Convergence în fiecare zonă
+    print(f"\nConvergence by zone:")
+    print(f"  φ-zone: {convergence[phi_zone].mean():.1f}%")
+    print(f"  Shadow: {convergence[shadow_zone].mean():.1f}%")
+    print(f"  Lock: {convergence[lock_zone].mean():.1f}%")
+
+
+# ========================================
+# TEST 2: TEMPORAL SHADOW (perioade fără tranziții)
+# ========================================
+def find_temporal_shadows(state_sequence):
+    """
+    Există perioade lungi de "stagnare" (umbră temporală)?
+    Când creierul nu se mișcă deloc?
+    """
+    
+    dwell_times = []
+    current_state = state_sequence[0]
+    current_dwell = 1
+    
+    for i in range(1, len(state_sequence)):
+        if state_sequence[i] == current_state:
+            current_dwell += 1
+        else:
+            dwell_times.append((current_state, current_dwell))
+            current_state = state_sequence[i]
+            current_dwell = 1
+    
+    # Longest dwells = "shadows" (perioade de non-mișcare)
+    dwell_times.sort(key=lambda x: x[1], reverse=True)
+    
+    print("TOP 10 LONGEST DWELLS (shadows):")
+    for state, duration in dwell_times[:10]:
+        print(f"  {state}: {duration} timepoints")
+    
+    # În ce stări sunt cele mai lungi "umbre"?
+    by_state = {}
+    for state, dur in dwell_times:
+        if state not in by_state:
+            by_state[state] = []
+        by_state[state].append(dur)
+    
+    print("\nMEAN DWELL TIME BY STATE:")
+    for state in sorted(by_state.keys()):
+        print(f"  {state}: {np.mean(by_state[state]):.1f}")
+
+
+# ========================================
+# TEST 3: TRANSITION SHADOWS (anti-patterns)
+# ========================================
+def find_transition_shadows(transitions):
+    """
+    Există tranziții care NICIODATĂ nu se întâmplă?
+    Acestea sunt "umbrele" - spațiile goale în matricea de tranziție
+    """
+    
+    all_states = ['V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7']
+    
+    # All possible transitions
+    possible = set()
+    for f in all_states:
+        for t in all_states:
+            if f != t:
+                possible.add((f, t))
+    
+    # Actual transitions
+    actual = set(transitions.keys())
+    
+    # Shadows = transitions that never happen
+    shadows = possible - actual
+    
+    print(f"TRANSITION SHADOWS (never happen):")
+    print(f"  Possible transitions: {len(possible)}")
+    print(f"  Actual transitions: {len(actual)}")
+    print(f"  Shadow transitions: {len(shadows)}")
+    
+    if shadows:
+        print("\nMISSING TRANSITIONS:")
+        for f, t in sorted(shadows):
+            print(f"  {f} → {t}: NEVER HAPPENS (shadow)")
+
+
+# ========================================
+# TEST 4: POWER SHADOW (când alpha eclipsează theta)
+# ========================================
+def find_power_shadows(theta_power, alpha_power):
+    """
+    Există momente când alpha "umbrește" complet theta?
+    Ratio foarte mare = theta eclipsat
+    """
+    
+    power_ratio = alpha_power / theta_power
+    
+    # High ratio = theta în "umbră"
+    theta_shadowed = power_ratio > 2.0  # Alpha de 2x mai puternic
+    alpha_shadowed = power_ratio < 0.5  # Theta de 2x mai puternic
+    
+    print("POWER SHADOWS:")
+    print(f"  Theta shadowed (α/θ > 2): {theta_shadowed.sum()} timepoints")
+    print(f"  Alpha shadowed (α/θ < 0.5): {alpha_shadowed.sum()} timepoints")
+    print(f"  Balanced: {(~theta_shadowed & ~alpha_shadowed).sum()} timepoints")
+
+
+# ========================================
+# TEST 5: PHASE SHADOW (anti-phase moments)
+# ========================================
+def find_phase_shadows(theta_phase, alpha_phase):
+    """
+    Există momente de anti-phase perfectă?
+    Când theta și alpha sunt exact în opoziție (180°)
+    """
+    
+    phase_diff = np.abs(theta_phase - alpha_phase)
+    phase_diff = np.minimum(phase_diff, 2*np.pi - phase_diff)
+    
+    # Anti-phase = ~180° = π radians
+    anti_phase = np.abs(phase_diff - np.pi) < 0.1  # Within ~6° of 180°
+    in_phase = phase_diff < 0.1  # Within ~6° of 0°
+    
+    print("PHASE SHADOWS:")
+    print(f"  Anti-phase moments (180°): {anti_phase.sum()}")
+    print(f"  In-phase moments (0°): {in_phase.sum()}")
+    print(f"  Ratio: {anti_phase.sum() / (in_phase.sum() + 0.001):.2f}")
+
+
+# ========================================
+# TEST 6: THE "NULL" ZONE (V4 as shadow)
+# ========================================
+def analyze_null_zone(state_sequence, transitions):
+    """
+    V4 (7:4 = 1.75) e exact la mijloc între φ (1.618) și 2:1 (2.0)
+    E aceasta "umbra" - zona de tranziție?
+    """
+    
+    v4_count = sum(1 for s in state_sequence if s == 'V4')
+    total = len(state_sequence)
+    
+    print(f"V4 (NULL ZONE) ANALYSIS:")
+    print(f"  Time in V4: {v4_count/total*100:.1f}%")
+    
+    # Transitions through V4
+    through_v4 = 0
+    for i in range(len(state_sequence) - 2):
+        if state_sequence[i] != 'V4' and state_sequence[i+1] == 'V4' and state_sequence[i+2] != 'V4':
+            through_v4 += 1
+    
+    print(f"  'Pass through' V4: {through_v4} times")
+    print(f"  V4 as waypoint vs destination?")
+    
+    # V4 as gateway between zones?
+    v4_to_phi = sum(transitions.get(('V4', t), 0) for t in ['V1', 'V2', 'V3'])
+    v4_to_lock = sum(transitions.get(('V4', t), 0) for t in ['V5', 'V6', 'V7'])
+    
+    print(f"  From V4 → φ-zone: {v4_to_phi}")
+    print(f"  From V4 → lock-zone: {v4_to_lock}")
