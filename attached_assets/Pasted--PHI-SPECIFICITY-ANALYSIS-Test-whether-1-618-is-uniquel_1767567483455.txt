@@ -1,0 +1,73 @@
+"""
+PHI-SPECIFICITY ANALYSIS
+========================
+Test whether φ (1.618) is uniquely optimal for predicting convergence,
+or if other non-harmonic ratios work equally well.
+
+INPUT: 
+- theta_alpha_ratios: array of N=90 subjects' mean θ/α frequency ratios
+- convergence_pct: array of N=90 subjects' convergence percentages
+
+OUTPUT:
+- Correlation between |ratio - target| and convergence for each target
+- Plot showing correlation as function of target ratio
+- Statistical comparison: is φ significantly better than neighbors?
+"""
+
+import numpy as np
+from scipy import stats
+import matplotlib.pyplot as plt
+
+# Simulated data (replace with your actual data)
+np.random.seed(42)
+# Your actual theta_alpha_ratios from the 90 subjects
+# Your actual convergence_pct from the 90 subjects
+
+# Target ratios to test
+targets = np.linspace(1.4, 2.2, 81)  # Fine grid
+special_targets = {
+    '3:2': 1.5,
+    '8:5': 1.6,
+    'φ': 1.618,
+    '5:3': 1.667,
+    '7:4': 1.75,
+    '2:1': 2.0
+}
+
+# For each target, compute correlation with convergence
+correlations = []
+for t in targets:
+    proximity = -np.abs(theta_alpha_ratios - t)  # Negative so higher = closer
+    r, p = stats.pearsonr(proximity, convergence_pct)
+    correlations.append(r)
+
+correlations = np.array(correlations)
+
+# Find optimal target
+optimal_idx = np.argmax(correlations)
+optimal_target = targets[optimal_idx]
+optimal_r = correlations[optimal_idx]
+
+print(f"Optimal target ratio: {optimal_target:.3f}")
+print(f"Correlation at optimal: r = {optimal_r:.3f}")
+print(f"φ (1.618) correlation: r = {correlations[np.argmin(np.abs(targets-1.618))]:.3f}")
+
+# Plot
+plt.figure(figsize=(10, 6))
+plt.plot(targets, correlations, 'b-', linewidth=2)
+plt.axvline(x=1.618, color='gold', linestyle='--', label=f'φ = 1.618')
+plt.axvline(x=2.0, color='red', linestyle='--', label='2:1 = 2.0')
+plt.axvline(x=optimal_target, color='green', linestyle=':', label=f'Optimal = {optimal_target:.3f}')
+plt.xlabel('Target Ratio')
+plt.ylabel('Correlation with Convergence')
+plt.title('φ-Specificity Analysis: Which ratio best predicts convergence?')
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.savefig('phi_specificity_analysis.png', dpi=150)
+plt.show()
+
+# Report for special targets
+print("\nCorrelations for theoretically relevant ratios:")
+for name, t in special_targets.items():
+    idx = np.argmin(np.abs(targets - t))
+    print(f"  {name} ({t}): r = {correlations[idx]:.3f}")
