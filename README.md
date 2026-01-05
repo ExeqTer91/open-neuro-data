@@ -41,6 +41,10 @@ PCI = log(|ratio - 2.0| / |ratio - φ|)
 | `comprehensive_analysis.py` | Full pipeline with all metrics |
 | `meditation_baseline_analysis.py` | Meditation vs baseline comparisons |
 | `coherence_analysis.py` | Inter-electrode coherence |
+<<<<<<< HEAD
+=======
+| `split_half_validation.py` | Split-half cross-validation (rules out circularity) |
+>>>>>>> 1cecdf1 (Update project)
 
 ### Data Files
 
@@ -58,6 +62,10 @@ PCI = log(|ratio - 2.0| / |ratio - φ|)
 - `phi_prediction_test.png` - PCI correlation with convergence
 - `cross_frequency_coupling.png` - CFC visualization
 - `comprehensive_phi_analysis.png` - Multi-panel summary figure
+<<<<<<< HEAD
+=======
+- `figure5_split_half_validation.png` - Split-half cross-validation proof
+>>>>>>> 1cecdf1 (Update project)
 
 ## Key Results
 
@@ -77,6 +85,21 @@ PCI = log(|ratio - 2.0| / |ratio - φ|)
 - 99.6% of subjects retained φ-organization after 1/f slope correction
 - Effect is property of true oscillations, not spectral artifact
 
+<<<<<<< HEAD
+=======
+### 4. Split-Half Validation (Rules Out Circularity)
+
+To address concerns about mathematical circularity between PCI and convergence, we performed split-half cross-validation on subjects with raw EEG epochs:
+
+- **N = 37** subjects with raw epochs
+- PCI computed from **ODD epochs** → Convergence computed from **EVEN epochs**
+- **r = 0.843**, p < 10⁻¹⁰, 95% CI [0.72, 0.92]
+
+![Split-Half Validation](figure5_split_half_validation.png)
+
+This demonstrates that the PCI-convergence relationship reflects **stable individual differences**, not mathematical coupling.
+
+>>>>>>> 1cecdf1 (Update project)
 ## Installation
 
 ```bash
